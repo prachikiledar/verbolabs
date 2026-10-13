@@ -1,8 +1,3 @@
-# SQLite databases
-app.db
-*.db
-*.sqlite
-*.sqlite3
 
 # Python cache and environments
 venv/
