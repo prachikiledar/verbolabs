@@ -506,14 +506,17 @@ body {
 .video-wrapper {
   position: relative;
   width: 100%;
+  max-width: 740px;
+  margin: 0 auto;
   background: #000;
   border-radius: var(--radius-sm);
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  max-height: 420px;
-  aspect-ratio: 16 / 9;
+  height: 270px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .video-wrapper video {

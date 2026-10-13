@@ -1315,6 +1315,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderTimeline();
   });
 
-  // Initial Boot Render
+  // Initial Boot Render & Auto-Load Demo Workspace
   renderTimeline();
+  loadSampleWorkspace();
 });
