@@ -991,20 +991,32 @@ async def save_subtitles_alias(
     sub_id = payload.get("subtitle_id") or 1
     track = crud.get_subtitle_track(db, sub_id)
     cues = payload.get("cues", [])
+    video_duration = float(payload.get("video_duration", 0.0) or 0.0)
+
+    # Convert cues if needed
+    cues_list = [
+        c if isinstance(c, dict) else (c.model_dump() if hasattr(c, "model_dump") else c.__dict__)
+        for c in cues
+    ]
+
     if not track:
         proj = crud.create_project(db=db, title="User Subtitles Project")
         track = crud.create_subtitle_track(
             db=db,
             filename="subtitles.srt",
-            cues=cues,
-            stats=calculate_subtitle_analytics(cues, 15.0),
+            cues=cues_list,
+            stats=calculate_subtitle_analytics(cues_list, video_duration or 15.0),
             raw_content="",
             project_id=proj.id
         )
-        return {"success": True, "project_id": proj.id, "subtitle_id": track.id, "cue_count": len(cues)}
+        return {"success": True, "project_id": proj.id, "subtitle_id": track.id, "cue_count": len(cues_list)}
     else:
-        req = SubtitleTrackUpdate(cues=cues)
-        updated = crud.update_subtitle_track(db, track, req)
+        updated = crud.sync_track_cues(
+            db=db,
+            track=track,
+            cues_data=cues_list,
+            video_duration=video_duration
+        )
         return {"success": True, "project_id": updated.project_id, "subtitle_id": updated.id, "cue_count": len(updated.cues or [])}
 
 # -------------------------------------------------------------

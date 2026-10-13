@@ -174,16 +174,23 @@ def list_subtitle_tracks(db: Session, skip: int = 0, limit: int = 50, project_id
 def update_subtitle_track(
     db: Session,
     track: SubtitleTrack,
-    filename: Optional[str] = None,
+    filename: Optional[Any] = None,
     language: Optional[str] = None,
     format_type: Optional[str] = None
 ) -> SubtitleTrack:
-    if filename is not None:
-        track.filename = filename
+    if hasattr(filename, "filename"):
+        if filename.filename is not None:
+            track.filename = str(filename.filename)
+        if hasattr(filename, "language") and filename.language is not None:
+            track.language = str(filename.language)
+        if hasattr(filename, "format") and filename.format is not None:
+            track.format = str(filename.format)
+    elif filename is not None:
+        track.filename = str(filename)
     if language is not None:
-        track.language = language
+        track.language = str(language)
     if format_type is not None:
-        track.format = format_type
+        track.format = str(format_type)
     track.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(track)
