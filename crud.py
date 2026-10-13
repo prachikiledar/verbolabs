@@ -129,14 +129,19 @@ def create_subtitle_track(
     db.add(track)
     db.flush()  # assign track.id before adding cues
 
-    for idx, cue_data in enumerate(cues, start=1):
-        start = float(cue_data["start"])
-        end = float(cue_data["end"])
-        duration = float(cue_data.get("duration", round(end - start, 2)))
-        text = str(cue_data["text"])
-        char_count = int(cue_data.get("char_count", len(text)))
-        words = int(cue_data.get("word_count", len(text.split())))
-        cps = float(cue_data.get("cps", round(char_count / duration, 1) if duration > 0 else 0.0))
+    for idx, raw_cue in enumerate(cues, start=1):
+        cue_data = raw_cue if isinstance(raw_cue, dict) else (raw_cue.model_dump() if hasattr(raw_cue, "model_dump") else raw_cue.__dict__)
+        start = float(cue_data.get("start", 0.0) or 0.0)
+        end = float(cue_data.get("end", 0.0) or 0.0)
+        dur = cue_data.get("duration")
+        duration = float(dur) if dur is not None and float(dur) > 0 else max(0.0, round(end - start, 2))
+        text = str(cue_data.get("text", "") or "")
+        char_val = cue_data.get("char_count")
+        char_count = int(char_val) if char_val is not None and char_val > 0 else len(text)
+        word_val = cue_data.get("word_count")
+        words = int(word_val) if word_val is not None and word_val > 0 else len(text.split())
+        cps_val = cue_data.get("cps")
+        cps = float(cps_val) if cps_val is not None else (round(char_count / duration, 1) if duration > 0 else 0.0)
         start_fmt = cue_data.get("start_formatted") or seconds_to_srt_time(start)
         end_fmt = cue_data.get("end_formatted") or seconds_to_srt_time(end)
 
@@ -218,14 +223,19 @@ def sync_track_cues(
 
     stats = calculate_subtitle_analytics(cues_data, video_duration)
 
-    for idx, cue_item in enumerate(cues_data, start=1):
-        start = float(cue_item["start"])
-        end = float(cue_item["end"])
-        duration = float(cue_item.get("duration", round(end - start, 2)))
-        text = str(cue_item["text"])
-        char_count = int(cue_item.get("char_count", len(text)))
-        words = int(cue_item.get("word_count", len(text.split())))
-        cps = float(cue_item.get("cps", round(char_count / duration, 1) if duration > 0 else 0.0))
+    for idx, raw_item in enumerate(cues_data, start=1):
+        cue_item = raw_item if isinstance(raw_item, dict) else (raw_item.model_dump() if hasattr(raw_item, "model_dump") else raw_item.__dict__)
+        start = float(cue_item.get("start", 0.0) or 0.0)
+        end = float(cue_item.get("end", 0.0) or 0.0)
+        dur = cue_item.get("duration")
+        duration = float(dur) if dur is not None and float(dur) > 0 else max(0.0, round(end - start, 2))
+        text = str(cue_item.get("text", "") or "")
+        char_val = cue_item.get("char_count")
+        char_count = int(char_val) if char_val is not None and char_val > 0 else len(text)
+        word_val = cue_item.get("word_count")
+        words = int(word_val) if word_val is not None and word_val > 0 else len(text.split())
+        cps_val = cue_item.get("cps")
+        cps = float(cps_val) if cps_val is not None else (round(char_count / duration, 1) if duration > 0 else 0.0)
         start_fmt = cue_item.get("start_formatted") or seconds_to_srt_time(start)
         end_fmt = cue_item.get("end_formatted") or seconds_to_srt_time(end)
 

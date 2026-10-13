@@ -988,8 +988,8 @@ async def save_subtitles_alias(
     payload: dict = Body(...),
     db: Session = Depends(get_db)
 ):
-    sub_id = payload.get("subtitle_id") or 1
-    track = crud.get_subtitle_track(db, sub_id)
+    sub_id = payload.get("subtitle_id")
+    project_id = payload.get("project_id")
     cues = payload.get("cues", [])
     video_duration = float(payload.get("video_duration", 0.0) or 0.0)
 
@@ -999,11 +999,36 @@ async def save_subtitles_alias(
         for c in cues
     ]
 
+    track = None
+    if sub_id:
+        try:
+            track = crud.get_subtitle_track(db, int(sub_id))
+        except (ValueError, TypeError):
+            pass
+
+    if not track and project_id:
+        try:
+            tracks = crud.list_subtitle_tracks(db, project_id=int(project_id))
+            if tracks:
+                track = tracks[0]
+        except (ValueError, TypeError):
+            pass
+
+    if not track and not project_id and not sub_id:
+        track = crud.get_subtitle_track(db, 1)
+
     if not track:
-        proj = crud.create_project(db=db, title="User Subtitles Project")
+        proj = None
+        if project_id:
+            try:
+                proj = crud.get_project(db, int(project_id))
+            except (ValueError, TypeError):
+                pass
+        if not proj:
+            proj = crud.create_project(db=db, title="User Subtitles Project")
         track = crud.create_subtitle_track(
             db=db,
-            filename="subtitles.srt",
+            filename=payload.get("video_filename") or "subtitles.srt",
             cues=cues_list,
             stats=calculate_subtitle_analytics(cues_list, video_duration or 15.0),
             raw_content="",

@@ -968,15 +968,29 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const payload = {
           project_id: state.projectId,
+          subtitle_id: state.subtitleId,
+          video_duration: state.videoDuration || (video ? video.duration : 0.0),
           video_filename: state.videoFilename,
           audio_filename: state.audioFilename,
-          cues: state.cues.map(c => ({
-            id: c.id,
-            start: c.start,
-            end: c.end,
-            duration: c.duration,
-            text: c.text
-          }))
+          cues: state.cues.map(c => {
+            const start = parseFloat(c.start) || 0.0;
+            const end = parseFloat(c.end) || 0.0;
+            const dur = parseFloat(c.duration) || Math.max(0.1, +(end - start).toFixed(2));
+            const txt = (c.text || '').toString();
+            const charCount = c.char_count != null ? c.char_count : txt.length;
+            const wordCount = c.word_count != null ? c.word_count : (txt.trim() ? txt.trim().split(/\s+/).length : 0);
+            const cps = c.cps != null ? c.cps : (dur > 0 ? +(charCount / dur).toFixed(1) : 0.0);
+            return {
+              id: c.id,
+              start: start,
+              end: end,
+              duration: dur,
+              text: txt,
+              char_count: charCount,
+              word_count: wordCount,
+              cps: cps
+            };
+          })
         };
 
         const response = await fetch('/api/subtitles/save', {

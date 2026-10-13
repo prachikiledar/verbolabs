@@ -141,6 +141,11 @@ def parse_subtitles_text(raw_text: str) -> List[Dict[str, Any]]:
 
     return cues
 
+def _get_cue_field(c: Any, key: str, default: Any = None) -> Any:
+    if isinstance(c, dict):
+        return c.get(key, default)
+    return getattr(c, key, default)
+
 def validate_subtitles(cues: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     Checks for common subtitle quality issues:
@@ -152,25 +157,38 @@ def validate_subtitles(cues: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     warnings = []
     for i, cue in enumerate(cues):
         cue_warns = []
-        if cue["end"] <= cue["start"]:
+        cue_id = _get_cue_field(cue, "id", i + 1)
+        start = float(_get_cue_field(cue, "start", 0.0) or 0.0)
+        end = float(_get_cue_field(cue, "end", 0.0) or 0.0)
+        dur = _get_cue_field(cue, "duration")
+        duration = float(dur) if dur is not None and float(dur) > 0 else max(0.0, round(end - start, 2))
+        text = str(_get_cue_field(cue, "text", "") or "")
+        char_cnt = _get_cue_field(cue, "char_count")
+        char_count = int(char_cnt) if char_cnt is not None else len(text)
+        cps_val = _get_cue_field(cue, "cps")
+        cps = float(cps_val) if cps_val is not None else (round(char_count / duration, 1) if duration > 0 else 0.0)
+
+        if end <= start:
             cue_warns.append("End timestamp is before or equal to start timestamp.")
-        if cue["cps"] > 21:
-            cue_warns.append(f"Fast reading pace: {cue['cps']} chars/sec (standard is < 20).")
-        if cue["duration"] < 0.6:
-            cue_warns.append(f"Very short duration ({cue['duration']}s).")
-        elif cue["duration"] > 7.0:
-            cue_warns.append(f"Long duration ({cue['duration']}s). Consider splitting.")
+        if cps > 21:
+            cue_warns.append(f"Fast reading pace: {cps} chars/sec (standard is < 20).")
+        if duration < 0.6:
+            cue_warns.append(f"Very short duration ({duration}s).")
+        elif duration > 7.0:
+            cue_warns.append(f"Long duration ({duration}s). Consider splitting.")
 
         # Check overlap with next cue
         if i < len(cues) - 1:
             next_cue = cues[i + 1]
-            if cue["end"] > next_cue["start"]:
-                overlap_time = round(cue["end"] - next_cue["start"], 2)
-                cue_warns.append(f"Overlaps with next cue #{next_cue['id']} by {overlap_time}s.")
+            next_start = float(_get_cue_field(next_cue, "start", 0.0) or 0.0)
+            next_id = _get_cue_field(next_cue, "id", i + 2)
+            if end > next_start:
+                overlap_time = round(end - next_start, 2)
+                cue_warns.append(f"Overlaps with next cue #{next_id} by {overlap_time}s.")
 
         if cue_warns:
             warnings.append({
-                "cue_id": cue["id"],
+                "cue_id": cue_id,
                 "issues": cue_warns
             })
 
@@ -178,7 +196,7 @@ def validate_subtitles(cues: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 def calculate_subtitle_analytics(cues: List[Dict[str, Any]], video_duration: float = 0.0) -> Dict[str, Any]:
     """
-    Computes analytics on subtitle track.
+    Computes analytics on subtitle track. Handles missing word_count, char_count, duration gracefully.
     """
     if not cues:
         return {
@@ -191,16 +209,35 @@ def calculate_subtitle_analytics(cues: List[Dict[str, Any]], video_duration: flo
             "coverage_percent": 0.0
         }
 
-    total_speech = sum(c["duration"] for c in cues)
-    total_words = sum(c["word_count"] for c in cues)
-    total_chars = sum(c["char_count"] for c in cues)
+    total_speech = 0.0
+    total_words = 0
+    total_chars = 0
+
+    for c in cues:
+        start = float(_get_cue_field(c, "start", 0.0) or 0.0)
+        end = float(_get_cue_field(c, "end", 0.0) or 0.0)
+        dur = _get_cue_field(c, "duration")
+        duration = float(dur) if dur is not None and float(dur) > 0 else max(0.0, round(end - start, 2))
+        text = str(_get_cue_field(c, "text", "") or "")
+
+        words = _get_cue_field(c, "word_count")
+        word_count = int(words) if words is not None and words > 0 else len(text.split())
+
+        chars = _get_cue_field(c, "char_count")
+        char_count = int(chars) if chars is not None and chars > 0 else len(text)
+
+        total_speech += duration
+        total_words += word_count
+        total_chars += char_count
+
+    total_speech = round(total_speech, 2)
     avg_cps = round(total_chars / total_speech, 1) if total_speech > 0 else 0.0
     avg_wpm = round((total_words / (total_speech / 60)), 1) if total_speech > 0 else 0.0
     coverage = round((total_speech / video_duration) * 100, 1) if video_duration > 0 else 0.0
 
     return {
         "total_cues": len(cues),
-        "total_speech_duration": round(total_speech, 2),
+        "total_speech_duration": total_speech,
         "total_words": total_words,
         "total_characters": total_chars,
         "avg_cps": avg_cps,
@@ -214,19 +251,31 @@ def shift_cues(cues: List[Dict[str, Any]], delta_seconds: float) -> List[Dict[st
     """
     shifted = []
     for cue in cues:
-        new_start = max(0.0, round(cue["start"] + delta_seconds, 3))
-        new_end = max(new_start + 0.1, round(cue["end"] + delta_seconds, 3))
+        start = float(_get_cue_field(cue, "start", 0.0) or 0.0)
+        end = float(_get_cue_field(cue, "end", 0.0) or 0.0)
+        text = str(_get_cue_field(cue, "text", "") or "")
+        char_cnt = _get_cue_field(cue, "char_count")
+        char_count = int(char_cnt) if char_cnt is not None else len(text)
+        word_cnt = _get_cue_field(cue, "word_count")
+        word_count = int(word_cnt) if word_cnt is not None else len(text.split())
+
+        new_start = max(0.0, round(start + delta_seconds, 3))
+        new_end = max(new_start + 0.1, round(end + delta_seconds, 3))
         duration = round(new_end - new_start, 2)
-        cps = round(cue["char_count"] / duration, 1) if duration > 0 else 0.0
-        shifted.append({
-            **cue,
+        cps = round(char_count / duration, 1) if duration > 0 else 0.0
+
+        base_dict = dict(cue) if isinstance(cue, dict) else (cue.model_dump() if hasattr(cue, "model_dump") else cue.__dict__.copy())
+        base_dict.update({
             "start": new_start,
             "end": new_end,
             "duration": duration,
             "start_formatted": seconds_to_srt_time(new_start),
             "end_formatted": seconds_to_srt_time(new_end),
+            "char_count": char_count,
+            "word_count": word_count,
             "cps": cps
         })
+        shifted.append(base_dict)
     return shifted
 
 def export_to_format(cues: List[Dict[str, Any]], format_type: str = "srt") -> Tuple[str, str, str]:
@@ -238,29 +287,42 @@ def export_to_format(cues: List[Dict[str, Any]], format_type: str = "srt") -> Tu
     if format_type == "srt":
         output = []
         for i, cue in enumerate(cues, 1):
-            s_time = seconds_to_srt_time(cue["start"])
-            e_time = seconds_to_srt_time(cue["end"])
-            output.append(f"{i}\n{s_time} --> {e_time}\n{cue['text']}\n")
+            start = float(_get_cue_field(cue, "start", 0.0) or 0.0)
+            end = float(_get_cue_field(cue, "end", 0.0) or 0.0)
+            text = str(_get_cue_field(cue, "text", "") or "")
+            s_time = seconds_to_srt_time(start)
+            e_time = seconds_to_srt_time(end)
+            output.append(f"{i}\n{s_time} --> {e_time}\n{text}\n")
         return "\n".join(output), "subtitles.srt", "application/x-subrip"
 
     elif format_type == "vtt":
         output = ["WEBVTT\n"]
         for i, cue in enumerate(cues, 1):
-            s_time = seconds_to_vtt_time(cue["start"])
-            e_time = seconds_to_vtt_time(cue["end"])
-            output.append(f"{i}\n{s_time} --> {e_time}\n{cue['text']}\n")
+            start = float(_get_cue_field(cue, "start", 0.0) or 0.0)
+            end = float(_get_cue_field(cue, "end", 0.0) or 0.0)
+            text = str(_get_cue_field(cue, "text", "") or "")
+            s_time = seconds_to_vtt_time(start)
+            e_time = seconds_to_vtt_time(end)
+            output.append(f"{i}\n{s_time} --> {e_time}\n{text}\n")
         return "\n".join(output), "subtitles.vtt", "text/vtt"
 
     elif format_type == "txt":
         output = []
         for cue in cues:
-            s_time = seconds_to_srt_time(cue["start"])
-            output.append(f"[{s_time}] {cue['text']}")
+            start = float(_get_cue_field(cue, "start", 0.0) or 0.0)
+            text = str(_get_cue_field(cue, "text", "") or "")
+            s_time = seconds_to_srt_time(start)
+            output.append(f"[{s_time}] {text}")
         return "\n".join(output), "subtitles.txt", "text/plain"
 
     elif format_type == "json":
         import json
-        return json.dumps(cues, indent=2), "subtitles.json", "application/json"
+        cues_serializable = [
+            c if isinstance(c, dict) else (c.model_dump() if hasattr(c, "model_dump") else c.__dict__)
+            for c in cues
+        ]
+        return json.dumps(cues_serializable, indent=2), "subtitles.json", "application/json"
 
     else:
         raise ValueError(f"Unsupported format: {format_type}")
+

@@ -301,3 +301,43 @@ def test_database_persistence_across_connection_reconnect():
         assert len(cues) >= 1
     finally:
         db.close()
+
+
+def test_save_subtitles_endpoint_without_word_count():
+    """Verify that /api/subtitles/save does not raise KeyError: 'word_count' when cues lack metrics"""
+    # 1. Test when cues only contain id, start, end, text (no word_count or char_count)
+    payload = {
+        "cues": [
+            {"id": 1, "start": 0.5, "end": 2.5, "text": "Testing cue save without word count"},
+            {"id": 2, "start": 3.0, "end": 5.0, "text": "Second test line here"}
+        ],
+        "video_duration": 10.0
+    }
+    resp = client.post("/api/subtitles/save", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["success"] is True
+    assert data["cue_count"] == 2
+    sub_id = data["subtitle_id"]
+
+    # 2. Test saving again (syncing existing track)
+    payload_update = {
+        "subtitle_id": sub_id,
+        "cues": [
+            {"id": 1, "start": 1.0, "end": 3.0, "text": "Updated line without extra keys"}
+        ],
+        "video_duration": 10.0
+    }
+    resp_update = client.post("/api/subtitles/save", json=payload_update)
+    assert resp_update.status_code == 200
+    update_data = resp_update.json()
+    assert update_data["success"] is True
+    assert update_data["cue_count"] == 1
+
+    # Verify track in DB has properly calculated metrics
+    track_resp = client.get(f"/api/subtitles/{sub_id}")
+    assert track_resp.status_code == 200
+    track_info = track_resp.json()
+    assert track_info["stats"]["total_words"] == 5
+    assert len(track_info["cues"]) == 1
+
