@@ -6,6 +6,7 @@ from typing import List, Dict, Any, Optional
 from contextlib import asynccontextmanager
 
 from fastapi import (
+    Body,
     FastAPI,
     UploadFile,
     File,
@@ -934,6 +935,77 @@ async def delete_audio_clip_endpoint(
     crud.delete_audio_clip(db, clip)
     return {"success": True, "message": f"Audio clip {clip_id} deleted successfully"}
 
+
+
+
+# =============================================================
+# BACKWARD-COMPATIBLE & FRONTEND ROUTE ALIASES
+# =============================================================
+@app.post("/api/extract-audio")
+async def extract_audio_alias(
+    file: UploadFile = File(...),
+    title: Optional[str] = Form(None),
+    db: Session = Depends(get_db)
+):
+    return await upload_video(file=file, title=title, db=db)
+
+@app.get("/api/sample/video")
+async def sample_video_alias():
+    video_path = SAMPLE_DIR / "demo_sample.mp4"
+    if not video_path.exists():
+        raise HTTPException(status_code=404, detail="Sample video not found")
+    return FileResponse(str(video_path), media_type="video/mp4")
+
+@app.get("/api/sample/audio")
+async def sample_audio_alias():
+    audio_path = SAMPLE_DIR / "demo_sample_extracted.mp3"
+    if not audio_path.exists():
+        raise HTTPException(status_code=404, detail="Sample audio not found")
+    return FileResponse(str(audio_path), media_type="audio/mpeg")
+
+@app.get("/api/sample/subtitles")
+async def sample_subtitles_alias(db: Session = Depends(get_db)):
+    return await load_sample_endpoint(db=db)
+
+@app.post("/api/subtitles/upload")
+async def upload_subtitles_alias(
+    file: UploadFile = File(...),
+    project_id: Optional[int] = Form(None),
+    media_file_id: Optional[int] = Form(None),
+    db: Session = Depends(get_db)
+):
+    return await upload_subtitles_file(file=file, project_id=project_id, media_file_id=media_file_id, db=db)
+
+@app.post("/api/subtitles/parse-raw")
+async def parse_subtitles_raw_alias(
+    payload: RawSubtitleRequest,
+    db: Session = Depends(get_db)
+):
+    return await parse_subtitles_raw(payload=payload, db=db)
+
+@app.post("/api/subtitles/save")
+async def save_subtitles_alias(
+    payload: dict = Body(...),
+    db: Session = Depends(get_db)
+):
+    sub_id = payload.get("subtitle_id") or 1
+    track = crud.get_subtitle_track(db, sub_id)
+    cues = payload.get("cues", [])
+    if not track:
+        proj = crud.create_project(db=db, title="User Subtitles Project")
+        track = crud.create_subtitle_track(
+            db=db,
+            filename="subtitles.srt",
+            cues=cues,
+            stats=calculate_subtitle_analytics(cues, 15.0),
+            raw_content="",
+            project_id=proj.id
+        )
+        return {"success": True, "project_id": proj.id, "subtitle_id": track.id, "cue_count": len(cues)}
+    else:
+        req = SubtitleTrackUpdate(cues=cues)
+        updated = crud.update_subtitle_track(db, track, req)
+        return {"success": True, "project_id": updated.project_id, "subtitle_id": updated.id, "cue_count": len(updated.cues or [])}
 
 # -------------------------------------------------------------
 # Static Frontend Assets

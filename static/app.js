@@ -1069,56 +1069,71 @@ document.addEventListener('DOMContentLoaded', () => {
   async function loadSampleWorkspace() {
     showToast('Loading demo media & waveform subtitles...');
     try {
-      // 1. Set Video
-      video.src = '/api/sample/video';
-      video.load();
+      // First try /api/load-sample
+      let data = null;
+      let res = await fetch('/api/load-sample');
+      if (res.ok) {
+        data = await res.json();
+      } else {
+        res = await fetch('/api/sample/subtitles');
+        if (res.ok) data = await res.json();
+      }
+
+      if (!data) throw new Error('Could not load demo sample');
+
       state.videoLoaded = true;
-      state.videoFilename = 'sample_video.mp4';
+      state.audioLoaded = true;
+      state.videoFilename = data.video_filename || 'demo_sample.mp4';
+      state.audioFilename = data.audio_filename || 'demo_sample_extracted.mp3';
+      state.videoDuration = data.duration || 8.0;
+      state.projectId = data.project_id || 1;
+      state.subtitleId = data.subtitle_id || 1;
+
+      const vidUrl = data.video_url || '/media/demo_sample.mp4';
+      const audUrl = data.audio_url || '/media/demo_sample_extracted.mp3';
+
+      // 1. Set Video
+      video.src = vidUrl;
+      video.load();
       if (videoStatusPill) {
         videoStatusPill.className = 'pill pill-active';
         videoStatusPill.textContent = '🎬 Video: Loaded';
       }
-      if (videoNameDisplay) videoNameDisplay.textContent = 'sample_video.mp4';
+      if (videoNameDisplay) videoNameDisplay.textContent = state.videoFilename;
 
       // 2. Set Audio
-      audio.src = '/api/sample/audio';
+      audio.src = audUrl;
       audio.load();
-      state.audioLoaded = true;
-      state.audioFilename = 'sample_extracted.mp3';
       if (audioStatusPill) {
         audioStatusPill.className = 'pill pill-active';
         audioStatusPill.textContent = '🎵 Audio: Active';
       }
       if (btnDownloadAudio) {
-        btnDownloadAudio.href = '/api/sample/audio';
+        btnDownloadAudio.href = audUrl;
         btnDownloadAudio.style.display = 'inline-flex';
       }
 
       // Decode audio for waveform
-      decodeAudioFromUrl('/api/sample/audio');
+      decodeAudioFromUrl(audUrl);
 
-      // 3. Load Synced Subtitles
-      const subsRes = await fetch('/api/sample/subtitles');
-      if (subsRes.ok) {
-        const subsData = await subsRes.json();
-        state.cues = (subsData.cues || []).map((c, i) => ({
-          id: i + 1,
-          start: c.start,
-          end: c.end,
-          duration: parseFloat((c.end - c.start).toFixed(3)),
-          text: c.text,
-          start_formatted: formatTimestamp(c.start),
-          end_formatted: formatTimestamp(c.end)
-        }));
-        state.videoDuration = 14.5;
-        if (subsStatusPill) {
-          subsStatusPill.className = 'pill pill-active';
-          subsStatusPill.textContent = `📝 Subs: ${state.cues.length} Cues`;
-        }
-        if (subsNameDisplay) subsNameDisplay.textContent = 'Waveform Synced Track';
-        renderTimeline();
-        if (state.cues.length > 0) selectCue(1);
+      // 3. Set Synced Subtitles
+      state.cues = (data.cues || []).map((c, i) => ({
+        id: i + 1,
+        start: c.start,
+        end: c.end,
+        duration: parseFloat((c.end - c.start).toFixed(3)),
+        text: c.text,
+        start_formatted: formatTimestamp(c.start),
+        end_formatted: formatTimestamp(c.end)
+      }));
+
+      if (subsStatusPill) {
+        subsStatusPill.className = 'pill pill-active';
+        subsStatusPill.textContent = `📝 Subs: ${state.cues.length} Cues`;
       }
+      if (subsNameDisplay) subsNameDisplay.textContent = 'Waveform Synced Track';
+      renderTimeline();
+      if (state.cues.length > 0) selectCue(1);
 
       updateActiveMediaBar();
       showToast('Demo workspace ready! Edit directly on the audio waveform.');
@@ -1145,7 +1160,11 @@ document.addEventListener('DOMContentLoaded', () => {
     formData.append('file', file);
 
     try {
-      const response = await fetch('/api/extract-audio', {
+      let response = await fetch('/api/upload-video', {
+        method: 'POST',
+        body: formData
+      });
+      if (!response.ok) response = await fetch('/api/extract-audio', {
         method: 'POST',
         body: formData
       });
