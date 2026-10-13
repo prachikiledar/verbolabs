@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Subtitle Studio — Python Subtitle & Audio Workspace</title>
-  <meta name="description" content="Extract audio from uploaded videos and work with subtitles in Python with real-time video sync, time shifting, and editing.">
+  <title>Subtitle Studio — Interactive Audio Waveform Subtitle Editor</title>
+  <meta name="description" content="Directly add and edit subtitles on the audio waveform timeline with real-time video sync in Python.">
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <!-- Toast Notifications -->
+  <!-- Toast Container -->
   <div id="toast-container" class="toast-container"></div>
 
   <!-- App Header -->
@@ -27,11 +27,11 @@
         </div>
         <div class="brand-text">
           <h1>Subtitle<span class="gradient-text">Studio</span></h1>
-          <span class="brand-badge">Python Engine</span>
+          <span class="brand-badge">Audio Waveform Editor</span>
         </div>
       </div>
 
-      <!-- Quick Media Status Badges -->
+      <!-- Quick Status Badges -->
       <div class="status-pills">
         <span id="video-status-pill" class="pill pill-idle">🎬 Video: None</span>
         <span id="audio-status-pill" class="pill pill-idle">🎵 Audio: None</span>
@@ -40,7 +40,7 @@
 
       <!-- Header Actions -->
       <div class="header-actions">
-        <button id="btn-toggle-upload" class="btn btn-ghost" title="Toggle Import Media Panel">
+        <button id="btn-toggle-upload" class="btn btn-ghost" title="Toggle File Import Panel">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="17 8 12 3 7 8"></polyline>
@@ -49,14 +49,14 @@
           <span id="upload-toggle-text">Import Media</span>
         </button>
 
-        <button id="btn-load-sample" class="btn btn-secondary" title="Load sample demo video, audio and subtitles">
+        <button id="btn-load-sample" class="btn btn-secondary" title="Load demo video, audio and synced subtitles">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="5 3 19 12 5 21 5 3"></polygon>
           </svg>
           Load Demo
         </button>
 
-        <button id="btn-save-db" class="btn btn-primary" title="Save subtitles track to SQLite database">
+        <button id="btn-save-db" class="btn btn-primary" title="Save subtitles to SQLite database">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
             <polyline points="17 21 17 13 7 13 7 21"></polyline>
@@ -98,12 +98,22 @@
       <div class="strip-divider">•</div>
       <div class="strip-item">
         <span class="strip-label">Subtitles:</span>
-        <span id="subs-name-display" class="strip-val">No subtitles</span>
+        <span id="subs-name-display" class="strip-val">Audio Waveform Track</span>
         <span id="subs-cue-count-badge" class="badge badge-purple" style="margin-left: 6px;">0 Cues</span>
         <div id="subs-file-info" style="display: none;"></div>
       </div>
     </div>
-    <button id="btn-reopen-import" class="btn btn-xs btn-outline">Change Media ▾</button>
+    <div class="strip-actions">
+      <a id="btn-download-audio" class="btn btn-xs btn-outline" download="extracted_audio.mp3" style="display: none;">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        Download Audio MP3
+      </a>
+      <button id="btn-reopen-import" class="btn btn-xs btn-outline">Change Media ▾</button>
+    </div>
   </div>
 
   <!-- Collapsible Import Section -->
@@ -118,8 +128,8 @@
           </svg>
         </div>
         <div>
-          <h2>1. Video & Audio</h2>
-          <p class="card-subtitle">Upload video • Auto-extracts MP3 audio track</p>
+          <h2>1. Video File</h2>
+          <p class="card-subtitle">Upload video &bull; Automatically extracts audio waveform</p>
         </div>
       </div>
 
@@ -134,11 +144,11 @@
             </svg>
           </div>
           <p class="drop-primary">Drop video file here, or <span class="highlight">browse</span></p>
-          <p class="drop-secondary">MP4, WEBM, MOV, MKV &bull; Auto-extracts audio</p>
+          <p class="drop-secondary">MP4, WEBM, MOV, MKV &bull; Auto-extracts audio track</p>
         </div>
         <div class="upload-progress-overlay" id="video-progress-overlay" style="display: none;">
           <div class="spinner"></div>
-          <p id="video-progress-text">Extracting audio from video...</p>
+          <p id="video-progress-text">Extracting audio waveform...</p>
         </div>
       </div>
     </div>
@@ -156,12 +166,12 @@
         </div>
         <div class="header-with-tabs">
           <div>
-            <h2>2. Subtitle Track</h2>
-            <p class="card-subtitle">Upload .SRT/.VTT or type/paste text</p>
+            <h2>2. Subtitle File (Optional)</h2>
+            <p class="card-subtitle">Import existing .SRT/.VTT or add directly on waveform</p>
           </div>
           <div class="tab-toggle">
             <button id="tab-btn-file" class="tab-btn active">File (.srt/.vtt)</button>
-            <button id="tab-btn-paste" class="tab-btn">Paste / Type</button>
+            <button id="tab-btn-paste" class="tab-btn">Paste Text</button>
           </div>
         </div>
       </div>
@@ -179,8 +189,8 @@
                 <line x1="16" y1="17" x2="8" y2="17"></line>
               </svg>
             </div>
-            <p class="drop-primary">Drop subtitle file, or <span class="highlight">browse</span></p>
-            <p class="drop-secondary">Supports .SRT, .VTT, or timestamped .TXT</p>
+            <p class="drop-primary">Drop existing subtitles, or <span class="highlight">browse</span></p>
+            <p class="drop-secondary">Loads cues directly onto the waveform</p>
           </div>
         </div>
       </div>
@@ -192,27 +202,51 @@
 00:00:01,000 --> 00:00:04,000
 Welcome to Subtitle Studio!"></textarea>
         <button id="btn-parse-raw" class="btn btn-primary btn-block">
-          Parse Subtitles
+          Load Onto Waveform
         </button>
       </div>
     </div>
   </section>
 
-  <!-- Studio Workspace Grid -->
+  <!-- Main Application Workspace -->
   <main class="app-main">
-    <section class="workspace-section" id="workspace-section">
-      <div class="workspace-grid">
-        
-        <!-- Left Column: Video Preview & Audio Controls -->
-        <div class="media-deck">
-          
-          <!-- Video Card -->
-          <div class="glass-card video-card">
-            <div class="deck-header">
-              <div class="deck-title-group">
-                <div class="deck-dot"></div>
-                <span class="deck-title">Video Preview</span>
+    
+    <!-- Top Stage: Video Preview Player -->
+    <section class="video-stage-section">
+      <div class="glass-card video-card">
+        <div class="video-stage-container">
+          <!-- Video Frame -->
+          <div class="video-wrapper" id="video-wrapper">
+            <video id="main-video" playsinline preload="metadata">
+              <p>Your browser does not support HTML5 video.</p>
+            </video>
+            <!-- Netflix-Style Subtitle Overlay on Video -->
+            <div id="video-sub-overlay" class="video-sub-overlay" style="display: none;">
+              <span id="video-sub-text"></span>
+            </div>
+          </div>
+
+          <!-- Video Playback Control Strip -->
+          <div class="video-controls-strip">
+            <div class="controls-left">
+              <button id="btn-video-play-toggle" class="stage-play-btn" title="Play / Pause Video (Spacebar)">
+                <svg id="stage-play-icon" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                <svg id="stage-pause-icon" viewBox="0 0 24 24" fill="currentColor" style="display: none;">
+                  <rect x="6" y="4" width="4" height="16"></rect>
+                  <rect x="14" y="4" width="4" height="16"></rect>
+                </svg>
+              </button>
+
+              <div class="timecode-display" id="video-timecode">
+                <span id="current-time-text">00:00.0</span> / <span id="total-time-text">00:00.0</span>
               </div>
+            </div>
+
+            <!-- Playback Speed Controls -->
+            <div class="controls-right">
+              <span class="control-label">Speed:</span>
               <div class="speed-controls">
                 <button class="speed-btn" data-speed="0.75">0.75x</button>
                 <button class="speed-btn active" data-speed="1.0">1.0x</button>
@@ -220,176 +254,180 @@ Welcome to Subtitle Studio!"></textarea>
                 <button class="speed-btn" data-speed="1.5">1.5x</button>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-            <div class="video-wrapper" id="video-wrapper">
-              <video id="main-video" controls playsinline preload="metadata">
-                <p>Your browser does not support HTML5 video.</p>
-              </video>
-              <div id="video-sub-overlay" class="video-sub-overlay" style="display: none;">
-                <span id="video-sub-text"></span>
-              </div>
-            </div>
+    <!-- Main Centerpiece: Audio Waveform & Subtitle Timeline -->
+    <section class="timeline-section" id="timeline-section">
+      <div class="glass-card timeline-card">
+        
+        <!-- Timeline Top Action Bar -->
+        <div class="timeline-toolbar">
+          <div class="toolbar-title-group">
+            <div class="waveform-live-dot"></div>
+            <h2 class="timeline-title">Audio Wavelength & Subtitle Timeline</h2>
+            <span class="timeline-guide">Double-click directly on audio wave to add subtitle &bull; Drag handles to trim</span>
           </div>
 
-          <!-- Extracted Audio & Waveform Deck -->
-          <div class="glass-card audio-deck-card">
-            <div class="deck-header">
-              <div class="audio-title-group">
-                <div class="audio-pulse-dot"></div>
-                <span class="deck-title">Audio Waveform</span>
-              </div>
-              <a id="btn-download-audio" class="btn btn-xs btn-outline" download="extracted_audio.mp3" style="display: none;">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="7 10 12 15 17 10"></polyline>
-                  <line x1="12" y1="15" x2="12" y2="3"></line>
-                </svg>
-                Download MP3
-              </a>
-            </div>
+          <div class="toolbar-actions">
+            <!-- Add Subtitle at Current Playhead -->
+            <button id="btn-add-cue" class="btn btn-sm btn-primary" title="Insert new subtitle cue at current video position">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              + Add Subtitle on Wave
+            </button>
 
-            <!-- Waveform Canvas -->
-            <div class="waveform-container">
-              <canvas id="waveform-canvas" width="600" height="54"></canvas>
-            </div>
+            <!-- Quick Shift Alignment Tools Toggle -->
+            <button id="btn-toggle-shifter" class="btn btn-sm btn-ghost" title="Time shift all subtitles">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              <span>Shift Time</span>
+            </button>
 
-            <!-- Audio Player Bar -->
-            <div class="audio-player-bar">
-              <button id="btn-audio-play" class="play-icon-btn" title="Play/Pause Audio">
-                <svg id="audio-play-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                </svg>
-                <svg id="audio-pause-icon" viewBox="0 0 24 24" fill="currentColor" style="display: none;">
-                  <rect x="6" y="4" width="4" height="16"></rect>
-                  <rect x="14" y="4" width="4" height="16"></rect>
-                </svg>
-              </button>
-              <div class="audio-time" id="audio-time-display">00:00 / 00:00</div>
-              <input type="range" id="audio-scrubber" class="scrubber-range" min="0" max="100" value="0" step="0.1">
-              <audio id="main-audio" preload="metadata"></audio>
+            <!-- Zoom Controls -->
+            <div class="zoom-controls">
+              <button id="btn-zoom-out" class="zoom-btn" title="Zoom Out Timeline">&minus;</button>
+              <span id="zoom-level-text" class="zoom-label">1x</span>
+              <button id="btn-zoom-in" class="zoom-btn" title="Zoom In Timeline">&plus;</button>
             </div>
           </div>
-
-          <!-- Diagnostics & Health Strip -->
-          <div class="glass-card analytics-card">
-            <div class="metrics-grid">
-              <div class="metric-item">
-                <span class="metric-num" id="stat-cues">0</span>
-                <span class="metric-label">Cues</span>
-              </div>
-              <div class="metric-item">
-                <span class="metric-num" id="stat-words">0</span>
-                <span class="metric-label">Words</span>
-              </div>
-              <div class="metric-item">
-                <span class="metric-num" id="stat-cps">0.0</span>
-                <span class="metric-label">Pace (CPS)</span>
-              </div>
-              <div class="metric-item">
-                <span class="metric-num" id="stat-coverage">0%</span>
-                <span class="metric-label">Coverage</span>
-              </div>
-            </div>
-
-            <!-- Warnings Notification Strip -->
-            <div id="warnings-box" class="warnings-box" style="display: none;">
-              <div class="warnings-header">
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                  <line x1="12" y1="9" x2="12" y2="13"></line>
-                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                </svg>
-                <span id="warnings-count-text">0 Quality Notices</span>
-              </div>
-              <ul id="warnings-list" class="warnings-list"></ul>
-            </div>
-          </div>
-
         </div>
 
-        <!-- Right Column: Subtitle Editor Studio -->
-        <div class="subtitle-deck">
-          <div class="glass-card subtitle-studio-card">
+        <!-- Collapsible Time Shifter Bar -->
+        <div id="time-shift-bar" class="time-shift-bar">
+          <span class="shift-label">Shift All Timeline Cues:</span>
+          <div class="shift-quick-buttons">
+            <button class="shift-btn" data-shift="-1.0">-1.0s</button>
+            <button class="shift-btn" data-shift="-0.5">-0.5s</button>
+            <button class="shift-btn" data-shift="-0.1">-0.1s</button>
+            <button class="shift-btn" data-shift="0.1">+0.1s</button>
+            <button class="shift-btn" data-shift="0.5">+0.5s</button>
+            <button class="shift-btn" data-shift="1.0">+1.0s</button>
+          </div>
+          <div class="custom-shift-input">
+            <input type="number" id="custom-shift-value" step="0.1" placeholder="± sec" style="width: 65px;">
+            <button id="btn-apply-custom-shift" class="btn btn-xs btn-outline">Apply</button>
+          </div>
+        </div>
+
+        <!-- Selected Subtitle Live Inspector / Quick Editor -->
+        <div id="active-cue-inspector" class="active-cue-inspector" style="display: none;">
+          <div class="inspector-badge">
+            <span id="inspector-cue-num" class="cue-pill-badge">#1</span>
+          </div>
+
+          <div class="inspector-timings">
+            <input type="text" id="inspector-start-input" class="time-input" title="Start Time">
+            <span class="time-arrow">&rarr;</span>
+            <input type="text" id="inspector-end-input" class="time-input" title="End Time">
+            <span id="inspector-duration-tag" class="cue-duration-tag">2.5s</span>
+          </div>
+
+          <div class="inspector-text-box">
+            <input type="text" id="inspector-text-input" class="inspector-input" placeholder="Type subtitle dialogue here (updates video instantly)..." spellcheck="false">
+          </div>
+
+          <div class="inspector-actions">
+            <button id="btn-inspector-play" class="btn btn-xs btn-ghost" title="Play subtitle segment">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+              Preview
+            </button>
+            <button id="btn-inspector-clip" class="btn btn-xs btn-ghost" title="Download audio clip for this line">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Clip MP3
+            </button>
+            <button id="btn-inspector-delete" class="btn btn-xs btn-delete-cue" title="Delete subtitle cue">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              Delete
+            </button>
+          </div>
+        </div>
+
+        <!-- The Interactive Waveform Timeline Stage -->
+        <div class="timeline-viewport" id="timeline-viewport">
+          <div class="timeline-track-wrapper" id="timeline-track-wrapper">
             
-            <!-- Top Controls Toolbar -->
-            <div class="studio-topbar">
-              <div class="search-box">
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-                <input type="text" id="subtitle-search" placeholder="Search dialogue...">
-                <span id="search-matches-badge" class="search-badge" style="display: none;">0 matches</span>
-              </div>
+            <!-- Timecode Ruler Bar -->
+            <div class="timeline-ruler" id="timeline-ruler">
+              <!-- Dynamically generated time ticks (0:00, 0:01, 0:02...) -->
+            </div>
 
-              <div class="studio-buttons">
-                <button id="btn-toggle-shifter" class="btn btn-sm btn-ghost" title="Toggle Time-Shift Alignment Panel">
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <polyline points="12 6 12 12 16 14"></polyline>
-                  </svg>
-                  <span>Sync Shift</span>
-                </button>
-
-                <button id="btn-add-cue" class="btn btn-sm btn-primary">
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                  </svg>
-                  + Add Cue
-                </button>
+            <!-- Audio Waveform Stage with Subtitle Blocks directly on the Wave -->
+            <div class="waveform-stage" id="waveform-stage" title="Double click anywhere to insert subtitle at that audio wavelength!">
+              <canvas id="waveform-canvas" width="1200" height="124"></canvas>
+              <!-- Subtitle Cues Track directly on the audio wave -->
+              <div class="subtitles-timeline-track" id="subtitles-timeline-track">
+                <!-- Subtitle Block chips are rendered here dynamically directly on the audio wavelength -->
               </div>
             </div>
 
-            <!-- Collapsible Time Shift Bar -->
-            <div id="time-shift-bar" class="time-shift-bar">
-              <div class="shift-label">
-                <span>Shift All Cues:</span>
-              </div>
-              <div class="shift-quick-buttons">
-                <button class="shift-btn" data-shift="-1.0">-1.0s</button>
-                <button class="shift-btn" data-shift="-0.5">-0.5s</button>
-                <button class="shift-btn" data-shift="-0.1">-0.1s</button>
-                <button class="shift-btn" data-shift="0.1">+0.1s</button>
-                <button class="shift-btn" data-shift="0.5">+0.5s</button>
-                <button class="shift-btn" data-shift="1.0">+1.0s</button>
-              </div>
-              <div class="custom-shift-input">
-                <input type="number" id="custom-shift-value" step="0.1" placeholder="± sec" style="width: 65px;">
-                <button id="btn-apply-custom-shift" class="btn btn-xs btn-outline">Apply</button>
-              </div>
+            <!-- Moving Video Playhead Tracker -->
+            <div class="timeline-playhead" id="timeline-playhead">
+              <div class="playhead-handle"></div>
+              <div class="playhead-line"></div>
+              <div class="playhead-tag" id="playhead-tag">00:00.0</div>
             </div>
 
-            <!-- Cue List Header -->
-            <div class="cuelist-header">
-              <span class="col-num">#</span>
-              <span class="col-time">Timing</span>
-              <span class="col-text">Subtitle Text</span>
-              <span class="col-actions">Actions</span>
-            </div>
+          </div>
+        </div>
 
-            <!-- Cues Container -->
-            <div class="cuelist-container" id="cuelist-container">
-              <div class="empty-state" id="empty-cues-state">
-                <div class="empty-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <rect x="2" y="4" width="20" height="16" rx="2"></rect>
-                    <line x1="6" y1="8" x2="10" y2="8"></line>
-                    <line x1="6" y1="12" x2="18" y2="12"></line>
-                    <line x1="6" y1="16" x2="14" y2="16"></line>
-                  </svg>
-                </div>
-                <h3>No Subtitles Loaded</h3>
-                <p>Click <strong>"Load Demo"</strong> above to see sample video & subtitles, or drop a video & SRT file.</p>
-              </div>
-            </div>
+        <!-- Timeline Footer Metrics & Diagnostics Strip -->
+        <div class="timeline-footer">
+          <div class="footer-metrics">
+            <span class="f-metric"><strong>Cues:</strong> <span id="stat-cues">0</span></span>
+            <span class="f-divider">&bull;</span>
+            <span class="f-metric"><strong>Words:</strong> <span id="stat-words">0</span></span>
+            <span class="f-divider">&bull;</span>
+            <span class="f-metric"><strong>Speech:</strong> <span id="stat-cps">0.0</span> chars/sec</span>
+            <span class="f-divider">&bull;</span>
+            <span class="f-metric"><strong>Coverage:</strong> <span id="stat-coverage">0%</span></span>
+          </div>
 
+          <!-- Quality Notices Notification Pill -->
+          <div id="warnings-box" class="warnings-chip" style="display: none;">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <span id="warnings-count-text">0 Quality Notices</span>
+            <ul id="warnings-list" style="display: none;"></ul>
           </div>
         </div>
 
       </div>
     </section>
+
   </main>
+
+  <!-- Hidden legacy / audio utility bindings for full engine backward compatibility -->
+  <div style="display: none;">
+    <audio id="main-audio" preload="metadata"></audio>
+    <div id="cuelist-container"></div>
+    <div id="empty-cues-state"></div>
+    <input type="text" id="subtitle-search">
+    <span id="search-matches-badge"></span>
+    <button id="btn-audio-play"></button>
+    <svg id="audio-play-icon"></svg>
+    <svg id="audio-pause-icon"></svg>
+    <div id="audio-time-display"></div>
+    <input type="range" id="audio-scrubber">
+  </div>
 
   <script src="/static/app.js"></script>
 </body>
