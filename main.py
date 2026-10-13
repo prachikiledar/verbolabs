@@ -1,0 +1,36 @@
+from fastapi import HTTPException, Header, Depends
+from pydantic import BaseModel
+from typing import Optional
+
+# Import Subtitle Studio FastAPI application
+from app import app
+
+# 1. Pydantic Model (Input Data Validation)
+class ConnectorPayload(BaseModel):
+    event_type: str
+    source: str
+    data: dict
+
+# 2. GET API (Health check / Fetch data)
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "service": "connector-service"}
+
+# 3. POST API (Webhook Receiver / Connector Endpoint)
+@app.post("/api/v1/webhook")
+async def receive_webhook(
+    payload: ConnectorPayload, 
+    x_api_key: Optional[str] = Header(None)
+):
+    # Auth verification
+    if x_api_key != "secret-token-123":
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    event = payload.event_type
+    incoming_data = payload.data
+    
+    return {
+        "status": "success",
+        "message": f"Event '{event}' processed successfully",
+        "record_id": incoming_data.get("id")
+    }

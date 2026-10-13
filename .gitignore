@@ -1,0 +1,28 @@
+# SQLite databases
+app.db
+*.db
+*.sqlite
+*.sqlite3
+
+# Python cache and environments
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Operating system
+.DS_Store
+Thumbs.db
+
+# Media uploads (user uploaded videos/audios)
+uploads/*
+!uploads/.gitkeep

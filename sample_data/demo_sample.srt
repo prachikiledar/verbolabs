@@ -1,0 +1,11 @@
+1
+00:00:00,500 --> 00:00:03,200
+Welcome to Python Subtitle Studio!
+
+2
+00:00:03,500 --> 00:00:05,800
+Audio has been extracted automatically from the video.
+
+3
+00:00:06,000 --> 00:00:07,800
+Upload your subtitles and edit them in real-time.

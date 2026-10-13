@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subtitle Studio — Python Subtitle & Audio Workspace</title>
+  <meta name="description" content="Extract audio from uploaded videos and work with subtitles in Python with real-time video sync, time shifting, and editing.">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- Toast Notifications -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="4" width="20" height="16" rx="3" />
+            <path d="M7 15h4M13 15h4M7 11h10" />
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>Subtitle<span class="gradient-text">Studio</span></h1>
+          <span class="brand-badge">Python Engine</span>
+        </div>
+      </div>
+
+      <!-- Quick Media Status Badges -->
+      <div class="status-pills">
+        <span id="video-status-pill" class="pill pill-idle">🎬 Video: None</span>
+        <span id="audio-status-pill" class="pill pill-idle">🎵 Audio: None</span>
+        <span id="subs-status-pill" class="pill pill-idle">📝 Subs: 0 Cues</span>
+      </div>
+
+      <!-- Header Actions -->
+      <div class="header-actions">
+        <button id="btn-toggle-upload" class="btn btn-ghost" title="Toggle Import Media Panel">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          <span id="upload-toggle-text">Import Media</span>
+        </button>
+
+        <button id="btn-load-sample" class="btn btn-secondary" title="Load sample demo video, audio and subtitles">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          Load Demo
+        </button>
+
+        <button id="btn-save-db" class="btn btn-primary" title="Save subtitles track to SQLite database">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+            <line x1="7" y1="3" x2="7" y2="8"></line>
+          </svg>
+          Save to DB
+        </button>
+
+        <!-- Export Dropdown -->
+        <div class="dropdown">
+          <button id="btn-export-dropdown" class="btn btn-secondary dropdown-toggle">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Export
+          </button>
+          <div class="dropdown-menu" id="export-menu">
+            <button class="dropdown-item" data-format="srt">SubRip (.SRT)</button>
+            <button class="dropdown-item" data-format="vtt">WebVTT (.VTT)</button>
+            <button class="dropdown-item" data-format="txt">Plain Text (.TXT)</button>
+            <button class="dropdown-item" data-format="json">JSON Data (.JSON)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Collapsible Active Media Bar -->
+  <div id="active-media-strip" class="active-media-strip" style="display: none;">
+    <div class="strip-content">
+      <div class="strip-item">
+        <span class="strip-dot"></span>
+        <span class="strip-label">Video:</span>
+        <span id="video-name-display" class="strip-val">No video</span>
+        <div id="video-file-info" style="display: none;"></div>
+      </div>
+      <div class="strip-divider">•</div>
+      <div class="strip-item">
+        <span class="strip-label">Subtitles:</span>
+        <span id="subs-name-display" class="strip-val">No subtitles</span>
+        <span id="subs-cue-count-badge" class="badge badge-purple" style="margin-left: 6px;">0 Cues</span>
+        <div id="subs-file-info" style="display: none;"></div>
+      </div>
+    </div>
+    <button id="btn-reopen-import" class="btn btn-xs btn-outline">Change Media ▾</button>
+  </div>
+
+  <!-- Collapsible Import Section -->
+  <section class="upload-grid" id="upload-section">
+    <!-- Video Uploader Card -->
+    <div class="glass-card upload-card" id="video-upload-card">
+      <div class="card-header">
+        <div class="card-icon video-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="23 7 16 12 23 17 23 7"></polygon>
+            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+          </svg>
+        </div>
+        <div>
+          <h2>1. Video & Audio</h2>
+          <p class="card-subtitle">Upload video • Auto-extracts MP3 audio track</p>
+        </div>
+      </div>
+
+      <div class="drop-zone" id="video-drop-zone">
+        <input type="file" id="video-file-input" accept="video/*" class="file-input">
+        <div class="drop-content">
+          <div class="upload-arrow-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+          </div>
+          <p class="drop-primary">Drop video file here, or <span class="highlight">browse</span></p>
+          <p class="drop-secondary">MP4, WEBM, MOV, MKV &bull; Auto-extracts audio</p>
+        </div>
+        <div class="upload-progress-overlay" id="video-progress-overlay" style="display: none;">
+          <div class="spinner"></div>
+          <p id="video-progress-text">Extracting audio from video...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manual Subtitles Uploader Card -->
+    <div class="glass-card upload-card" id="subtitle-upload-card">
+      <div class="card-header">
+        <div class="card-icon subs-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+            <line x1="6" y1="8" x2="10" y2="8"></line>
+            <line x1="6" y1="12" x2="18" y2="12"></line>
+            <line x1="6" y1="16" x2="14" y2="16"></line>
+          </svg>
+        </div>
+        <div class="header-with-tabs">
+          <div>
+            <h2>2. Subtitle Track</h2>
+            <p class="card-subtitle">Upload .SRT/.VTT or type/paste text</p>
+          </div>
+          <div class="tab-toggle">
+            <button id="tab-btn-file" class="tab-btn active">File (.srt/.vtt)</button>
+            <button id="tab-btn-paste" class="tab-btn">Paste / Type</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- File Upload Tab -->
+      <div id="sub-file-tab" class="tab-content active">
+        <div class="drop-zone" id="subs-drop-zone">
+          <input type="file" id="subs-file-input" accept=".srt,.vtt,.txt" class="file-input">
+          <div class="drop-content">
+            <div class="upload-arrow-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+              </svg>
+            </div>
+            <p class="drop-primary">Drop subtitle file, or <span class="highlight">browse</span></p>
+            <p class="drop-secondary">Supports .SRT, .VTT, or timestamped .TXT</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Paste Text Tab -->
+      <div id="sub-paste-tab" class="tab-content" style="display: none;">
+        <textarea id="raw-subs-textarea" class="subs-textarea" rows="3" placeholder="Paste your SRT or VTT content here...
+1
+00:00:01,000 --> 00:00:04,000
+Welcome to Subtitle Studio!"></textarea>
+        <button id="btn-parse-raw" class="btn btn-primary btn-block">
+          Parse Subtitles
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Studio Workspace Grid -->
+  <main class="app-main">
+    <section class="workspace-section" id="workspace-section">
+      <div class="workspace-grid">
+        
+        <!-- Left Column: Video Preview & Audio Controls -->
+        <div class="media-deck">
+          
+          <!-- Video Card -->
+          <div class="glass-card video-card">
+            <div class="deck-header">
+              <div class="deck-title-group">
+                <div class="deck-dot"></div>
+                <span class="deck-title">Video Preview</span>
+              </div>
+              <div class="speed-controls">
+                <button class="speed-btn" data-speed="0.75">0.75x</button>
+                <button class="speed-btn active" data-speed="1.0">1.0x</button>
+                <button class="speed-btn" data-speed="1.25">1.25x</button>
+                <button class="speed-btn" data-speed="1.5">1.5x</button>
+              </div>
+            </div>
+
+            <div class="video-wrapper" id="video-wrapper">
+              <video id="main-video" controls playsinline preload="metadata">
+                <p>Your browser does not support HTML5 video.</p>
+              </video>
+              <div id="video-sub-overlay" class="video-sub-overlay" style="display: none;">
+                <span id="video-sub-text"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Extracted Audio & Waveform Deck -->
+          <div class="glass-card audio-deck-card">
+            <div class="deck-header">
+              <div class="audio-title-group">
+                <div class="audio-pulse-dot"></div>
+                <span class="deck-title">Audio Waveform</span>
+              </div>
+              <a id="btn-download-audio" class="btn btn-xs btn-outline" download="extracted_audio.mp3" style="display: none;">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Download MP3
+              </a>
+            </div>
+
+            <!-- Waveform Canvas -->
+            <div class="waveform-container">
+              <canvas id="waveform-canvas" width="600" height="54"></canvas>
+            </div>
+
+            <!-- Audio Player Bar -->
+            <div class="audio-player-bar">
+              <button id="btn-audio-play" class="play-icon-btn" title="Play/Pause Audio">
+                <svg id="audio-play-icon" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                <svg id="audio-pause-icon" viewBox="0 0 24 24" fill="currentColor" style="display: none;">
+                  <rect x="6" y="4" width="4" height="16"></rect>
+                  <rect x="14" y="4" width="4" height="16"></rect>
+                </svg>
+              </button>
+              <div class="audio-time" id="audio-time-display">00:00 / 00:00</div>
+              <input type="range" id="audio-scrubber" class="scrubber-range" min="0" max="100" value="0" step="0.1">
+              <audio id="main-audio" preload="metadata"></audio>
+            </div>
+          </div>
+
+          <!-- Diagnostics & Health Strip -->
+          <div class="glass-card analytics-card">
+            <div class="metrics-grid">
+              <div class="metric-item">
+                <span class="metric-num" id="stat-cues">0</span>
+                <span class="metric-label">Cues</span>
+              </div>
+              <div class="metric-item">
+                <span class="metric-num" id="stat-words">0</span>
+                <span class="metric-label">Words</span>
+              </div>
+              <div class="metric-item">
+                <span class="metric-num" id="stat-cps">0.0</span>
+                <span class="metric-label">Pace (CPS)</span>
+              </div>
+              <div class="metric-item">
+                <span class="metric-num" id="stat-coverage">0%</span>
+                <span class="metric-label">Coverage</span>
+              </div>
+            </div>
+
+            <!-- Warnings Notification Strip -->
+            <div id="warnings-box" class="warnings-box" style="display: none;">
+              <div class="warnings-header">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                  <line x1="12" y1="9" x2="12" y2="13"></line>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                <span id="warnings-count-text">0 Quality Notices</span>
+              </div>
+              <ul id="warnings-list" class="warnings-list"></ul>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Column: Subtitle Editor Studio -->
+        <div class="subtitle-deck">
+          <div class="glass-card subtitle-studio-card">
+            
+            <!-- Top Controls Toolbar -->
+            <div class="studio-topbar">
+              <div class="search-box">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="subtitle-search" placeholder="Search dialogue...">
+                <span id="search-matches-badge" class="search-badge" style="display: none;">0 matches</span>
+              </div>
+
+              <div class="studio-buttons">
+                <button id="btn-toggle-shifter" class="btn btn-sm btn-ghost" title="Toggle Time-Shift Alignment Panel">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                  <span>Sync Shift</span>
+                </button>
+
+                <button id="btn-add-cue" class="btn btn-sm btn-primary">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  + Add Cue
+                </button>
+              </div>
+            </div>
+
+            <!-- Collapsible Time Shift Bar -->
+            <div id="time-shift-bar" class="time-shift-bar">
+              <div class="shift-label">
+                <span>Shift All Cues:</span>
+              </div>
+              <div class="shift-quick-buttons">
+                <button class="shift-btn" data-shift="-1.0">-1.0s</button>
+                <button class="shift-btn" data-shift="-0.5">-0.5s</button>
+                <button class="shift-btn" data-shift="-0.1">-0.1s</button>
+                <button class="shift-btn" data-shift="0.1">+0.1s</button>
+                <button class="shift-btn" data-shift="0.5">+0.5s</button>
+                <button class="shift-btn" data-shift="1.0">+1.0s</button>
+              </div>
+              <div class="custom-shift-input">
+                <input type="number" id="custom-shift-value" step="0.1" placeholder="± sec" style="width: 65px;">
+                <button id="btn-apply-custom-shift" class="btn btn-xs btn-outline">Apply</button>
+              </div>
+            </div>
+
+            <!-- Cue List Header -->
+            <div class="cuelist-header">
+              <span class="col-num">#</span>
+              <span class="col-time">Timing</span>
+              <span class="col-text">Subtitle Text</span>
+              <span class="col-actions">Actions</span>
+            </div>
+
+            <!-- Cues Container -->
+            <div class="cuelist-container" id="cuelist-container">
+              <div class="empty-state" id="empty-cues-state">
+                <div class="empty-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                    <line x1="6" y1="8" x2="10" y2="8"></line>
+                    <line x1="6" y1="12" x2="18" y2="12"></line>
+                    <line x1="6" y1="16" x2="14" y2="16"></line>
+                  </svg>
+                </div>
+                <h3>No Subtitles Loaded</h3>
+                <p>Click <strong>"Load Demo"</strong> above to see sample video & subtitles, or drop a video & SRT file.</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
